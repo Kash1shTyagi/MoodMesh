@@ -1,0 +1,30 @@
+model:
+  name: "dialogpt_emotion"
+  type: "ONNX"
+  path: "${MODELS_DIR}/llm/dialogpt_emotion.onnx"
+  max_length: 128
+  temperature: 0.7
+  top_k: 50
+  top_p: 0.95
+  repetition_penalty: 1.2
+
+prompt_templates:
+  emotion:
+    neutral: "The user appears neutral. Continue the conversation:"
+    happy: "The user seems happy. Respond enthusiastically:"
+    sad: "The user seems sad. Provide comfort:"
+    angry: "The user appears angry. Respond carefully:"
+    surprised: "The user seems surprised. Express shared excitement:"
+  silence:
+    short: "User has been briefly silent. Ask a question:"
+    long: "User has been silent for a while. Initiate conversation:"
+
+context:
+  max_history: 5  # Last 5 exchanges
+  emotion_context_weight: 0.6
+  keyword_extraction: true
+
+safety:
+  profanity_filter: true
+  bias_mitigation: true
+  ethical_guidelines: "default"
