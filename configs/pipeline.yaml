@@ -1,0 +1,43 @@
+pipeline:
+  mode: "realtime"  # Options: realtime, debug, benchmark
+  max_fps: 30
+  frame_processing:
+    enabled: true
+    resize: [640, 480]
+    crop_strategy: "center"
+  audio:
+    sample_rate: 16000
+    buffer_size: 2048
+    silence_threshold: 2.0  # seconds
+  fusion:
+    strategy: "weighted_average"  # Options: weighted_average, attention, transformer
+    weights:
+      emotion: 0.7
+      speech: 0.3
+  logging:
+    level: "INFO"
+    session_log_path: "${DATA_DIR}/sessions"
+  performance:
+    target_latency_ms: 100
+    dynamic_quality: true
+
+personality_profiles:
+  default: "friendly"
+  profiles:
+    friendly:
+      tone: "casual"
+      empathy_level: 0.8
+      humor: "light"
+    professional:
+      tone: "formal"
+      empathy_level: 0.5
+      humor: "none"
+    therapist:
+      tone: "gentle"
+      empathy_level: 0.95
+      humor: "none"
+
+resource_management:
+  max_cpu_usage: 80
+  max_gpu_usage: 70
+  max_memory_usage: 75
