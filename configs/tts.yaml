@@ -1,0 +1,38 @@
+model:
+  name: "vits_emotion"
+  type: "ONNX"
+  path: "${MODELS_DIR}/tts/vits_emotion.onnx"
+  sample_rate: 22050
+
+voice:
+  default: "female_calm"
+  voices:
+    female_calm:
+      pitch: 0.0
+      rate: 1.0
+      volume: 1.0
+    male_energetic:
+      pitch: -0.2
+      rate: 1.1
+      volume: 1.1
+
+emotion_prosody:
+  enabled: true
+  mappings:
+    happy:
+      pitch_variation: 0.3
+      speaking_rate: 1.2
+    sad:
+      pitch_variation: -0.2
+      speaking_rate: 0.8
+    angry:
+      pitch_variation: 0.4
+      speaking_rate: 1.3
+    surprised:
+      pitch_variation: 0.5
+      speaking_rate: 1.4
+
+output:
+  device: "default"
+  buffer_size: 4096
+  preload_cache: true
