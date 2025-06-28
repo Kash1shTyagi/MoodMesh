@@ -1,0 +1,35 @@
+model:
+  name: "emotion_net_v3"
+  type: "ONNX"  # Options: ONNX, TorchScript, TensorRT
+  path: "${MODELS_DIR}/emotion/emotion_net_v3.onnx"
+  input_size: [224, 224]
+  output_classes: 
+    - "neutral"
+    - "happy"
+    - "sad"
+    - "surprised"
+    - "angry"
+    - "disgusted"
+    - "fearful"
+  threshold: 0.6
+
+detection:
+  face_detector: "retinaface"  # Options: retinaface, mediapipe, haar
+  min_confidence: 0.8
+  max_faces: 5
+  landmark_points: 68  # For alignment
+
+tracking:
+  decay_rate: 0.92
+  buffer_size: 15
+  transition_threshold: 0.25
+
+augmentation:
+  enabled: true
+  techniques:
+    - "random_brightness"
+    - "random_contrast"
+    - "horizontal_flip"
+  params:
+    brightness_range: [0.8, 1.2]
+    contrast_range: [0.8, 1.2]
