@@ -1,0 +1,30 @@
+model:
+  name: "wav2vec2_emotion"
+  type: "ONNX"
+  path: "${MODELS_DIR}/asr/wav2vec2_emotion.onnx"
+  sample_rate: 16000
+  context_window: 30  # seconds
+  emotion_weights:
+    angry: 1.2
+    happy: 0.9
+    sad: 1.1
+    surprised: 1.0
+    neutral: 1.0
+
+vad:
+  aggressiveness: 2  # 0-3
+  frame_duration: 30  # ms
+  padding_duration: 300  # ms
+
+preprocessing:
+  noise_reduction: true
+  gain_normalization: true
+  max_amplitude: 0.9
+
+language:
+  default: "en"
+  supported:
+    - "en"
+    - "es"
+    - "fr"
+    - "de"
