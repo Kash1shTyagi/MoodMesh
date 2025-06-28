@@ -2,8 +2,10 @@ import asyncio
 import concurrent.futures
 from typing import Callable, Any, Coroutine
 import logging
+import queue
 from queue import Queue
 from threading import Thread
+import threading
 
 logger = logging.getLogger(__name__)
 
@@ -14,8 +16,6 @@ class AsyncProcessor:
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_workers)
         self.task_queue = Queue(maxsize=queue_size)
         self._running = True
-        
-        # Start worker thread
         self.worker_thread = Thread(target=self._process_tasks, daemon=True)
         self.worker_thread.start()
     
@@ -55,55 +55,68 @@ class AsyncProcessor:
         self.worker_thread.join(timeout=5.0)
 
 
-class AsyncBatchProcessor(AsyncProcessor):
-    """Batch processing with configurable batching strategies"""
-    
-    def __init__(self, batch_size: int = 8, timeout: float = 0.1, **kwargs):
-        super().__init__(**kwargs)
+
+class AsyncBatchProcessor:
+    def __init__(self, batch_size: int = 8, timeout: float = 0.1, 
+                 max_queue_size: int = 100, **kwargs):
         self.batch_size = batch_size
         self.timeout = timeout
-        self.batch_queue = Queue()
-        self.batch_worker = Thread(target=self._process_batches, daemon=True)
-        self.batch_worker.start()
+        self.batch_queue = queue.Queue(maxsize=max_queue_size)
+        self._running = True
+        self.processing_lock = threading.Lock()
+        self.processing_lock.acquire()  
+        
+        self.worker_thread = threading.Thread(target=self._process_batches, daemon=True)
+        self.worker_thread.start()
     
     def _process_batches(self):
         """Process tasks in batches"""
-        while self._running or not self.batch_queue.empty():
+        while self._running:
             try:
-                batch = []
-                # Wait for batch to fill or timeout
-                while len(batch) < self.batch_size:
-                    try:
-                        task = self.batch_queue.get(timeout=self.timeout)
-                        batch.append(task)
-                    except:
-                        if batch:
-                            break
+                self.processing_lock.acquire()
                 
-                if not batch:
+                batch = []
+                try:
+                    task = self.batch_queue.get(timeout=self.timeout)
+                    batch.append(task)
+                except queue.Empty:
                     continue
                 
-                # Process batch
-                futures, fn, batch_args = zip(*[(t[0], t[1], t[2]) for t in batch])
-                try:
-                    results = fn(batch_args)
-                    for future, result in zip(futures, results):
-                        future.set_result(result)
-                except Exception as e:
-                    for future in futures:
-                        future.set_exception(e)
+                future, fn, arg = batch[0]
                 
-                for _ in batch:
-                    self.batch_queue.task_done()
+                try:
+                    result = fn([arg])[0]  
+                    future.set_result(result)
+                except Exception as e:
+                    future.set_exception(e)
+                
+                self.batch_queue.task_done()
                     
             except Exception as e:
                 logger.error(f"Batch processing error: {e}")
+    
+    def allow_processing(self):
+        """Release the processing lock to allow items to be processed"""
+        try:
+            self.processing_lock.release()
+        except RuntimeError:
+            pass
     
     def submit_batch(self, fn: Callable, args_list: list) -> list:
         """Submit a batch of tasks"""
         futures = []
         for args in args_list:
             future = concurrent.futures.Future()
-            self.batch_queue.put((future, fn, args))
-            futures.append(future)
+            try:
+                self.batch_queue.put((future, fn, args), timeout=0.01)
+                futures.append(future)
+            except queue.Full:
+                future.set_exception(RuntimeError("Batch queue full"))
+                futures.append(future)
         return futures
+    
+    def shutdown(self, wait: bool = True):
+        """Shutdown the processor"""
+        self._running = False
+        self.allow_processing()
+        self.worker_thread.join(timeout=5.0)

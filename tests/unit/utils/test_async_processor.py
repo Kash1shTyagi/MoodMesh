@@ -10,7 +10,11 @@ def slow_function(x):
     return x * 2
 
 def batch_process(items):
-    return [item * 2 for item in items]
+    return [item[0] * 2 for item in items] 
+
+def slow_batch_function(items):
+    time.sleep(0.1)
+    return [item[0] * 2 for item in items] 
 
 @pytest.fixture
 def processor():
@@ -18,7 +22,11 @@ def processor():
 
 @pytest.fixture
 def batch_processor():
-    return AsyncBatchProcessor(batch_size=2, timeout=0.1)
+    return AsyncBatchProcessor(
+        batch_size=1,
+        timeout=0.1,
+        max_queue_size=1  
+    )
 
 def test_async_submit(processor):
     future = processor.submit(square, 5)
@@ -40,20 +48,27 @@ def test_async_shutdown(processor):
         processor.submit(square, 5)
 
 def test_batch_processing(batch_processor):
-    args_list = [[1], [2], [3], [4]]
+    args_list = [[1], [2], [3], [4]]  
     futures = batch_processor.submit_batch(batch_process, args_list)
     results = [f.result() for f in futures]
     assert results == [2, 4, 6, 8]
 
 def test_batch_timeout(batch_processor):
-    # Test partial batch processing due to timeout
     args_list = [[1], [2], [3]]
-    futures = batch_processor.submit_batch(slow_function, args_list)
+    futures = batch_processor.submit_batch(slow_batch_function, args_list)
     results = [f.result() for f in futures]
     assert results == [2, 4, 6]
 
 def test_batch_large_queue(batch_processor):
-    # Test queue overflow protection
-    with pytest.raises(Exception):
-        for i in range(150):  # Exceeds default queue size
-            batch_processor.submit_batch(batch_process, [[i]])
+    future1 = batch_processor.submit_batch(batch_process, [[1]])[0]
+    
+    future2 = batch_processor.submit_batch(batch_process, [[2]])[0]
+    
+    batch_processor.allow_processing()
+    
+    assert future1.result(timeout=0.5) == 2
+    
+    with pytest.raises(RuntimeError) as exc_info:
+        future2.result(timeout=0.5)
+    
+    assert "Batch queue full" in str(exc_info.value)

@@ -20,10 +20,12 @@ def test_monitor_start_stop(monitor):
 @patch("psutil.virtual_memory")
 @patch("GPUtil.getGPUs")
 def test_monitor_data_collection(mock_gpus, mock_mem, mock_cpu, monitor):
-    # Mock system responses
     mock_cpu.return_value = 30.0
     mock_mem.return_value.percent = 50.0
-    mock_gpus.return_value = [MagicMock(load=0.5)]  # 50% GPU load
+    
+    mock_gpu = MagicMock()
+    mock_gpu.load = 0.5
+    mock_gpus.return_value = [mock_gpu]
     
     monitor.start()
     time.sleep(0.15)
@@ -58,4 +60,4 @@ def test_process_monitoring(monitor):
     process_stats = monitor.get_process_stats()
     assert "cpu" in process_stats
     assert "memory" in process_stats
-    assert process_stats["memory"] > 0  # Should have some memory usage
+    assert process_stats["memory"] > 0  

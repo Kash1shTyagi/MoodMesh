@@ -4,6 +4,7 @@ from typing import Dict, Any, Optional
 from pathlib import Path
 from dotenv import load_dotenv
 import logging
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -16,13 +17,18 @@ class ConfigLoader:
         load_dotenv() 
         
     def _resolve_env_vars(self, config: Dict[str, Any]) -> Dict[str, Any]:
-        """Recursively replace ${VAR} with environment variables"""
+        """Recursively replace ${VAR} with environment variables in strings"""
+        pattern = re.compile(r'\$\{([^}]+)\}')
+        
         def _replace(value: Any) -> Any:
             if isinstance(value, str):
-                if value.startswith("${") and value.endswith("}"):
-                    env_var = value[2:-1]
-                    return os.getenv(env_var, value)
-                return value
+                def replace_match(match):
+                    var_name = match.group(1)
+                    if ':-' in var_name:
+                        var_name, default = var_name.split(':-', 1)
+                        return os.getenv(var_name, default)
+                    return os.getenv(var_name, match.group(0))
+                return pattern.sub(replace_match, value)
             elif isinstance(value, dict):
                 return {k: _replace(v) for k, v in value.items()}
             elif isinstance(value, list):
