@@ -1,28 +1,31 @@
 model:
-  name: "emotion_net_v3"
-  type: "ONNX"  # Options: ONNX, TorchScript, TensorRT
-  path: "${MODELS_DIR}/emotion/emotion_net_v3.onnx"
-  input_size: [224, 224]
+  name: "emotion_recognition_v8"
+  type: "ONNX"
+  detection_path: "${MODELS_DIR}/buffalo_l/det_10g.onnx"
+  recognition_path: "${MODELS_DIR}/affectnet_emotion.onnx"
+  input_size: [640, 640]  
+  recog_input_size: [64, 64]  
   output_classes: 
     - "neutral"
     - "happy"
+    - "surprise"
     - "sad"
-    - "surprised"
-    - "angry"
-    - "disgusted"
-    - "fearful"
-  threshold: 0.6
+    - "anger"
+    - "disgust"
+    - "fear"
+    - "contempt"
+  threshold: 0.2
 
 detection:
-  face_detector: "retinaface"  # Options: retinaface, mediapipe, haar
-  min_confidence: 0.8
+  min_confidence: 0.7
   max_faces: 5
-  landmark_points: 68  # For alignment
+  landmark_points: 5  
 
 tracking:
-  decay_rate: 0.92
+  decay_rate: 0.95
   buffer_size: 15
   transition_threshold: 0.25
+  engagement_threshold: 0.4
 
 augmentation:
   enabled: true
